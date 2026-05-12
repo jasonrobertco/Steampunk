@@ -8,6 +8,7 @@ public class PlayerControllerScript : MonoBehaviour
 
     private float moveX;
     private Rigidbody2D rb;
+    private bool isGrounded;
 
     void Start()
     {
@@ -22,14 +23,31 @@ public class PlayerControllerScript : MonoBehaviour
 
     void OnJump(InputValue value)
     {
-        if (value.isPressed)
+        if (value.isPressed && isGrounded)
         {
             rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+            isGrounded = false;
         }
     }
 
     void FixedUpdate()
     {
         rb.linearVelocity = new Vector2(moveX * speed, rb.linearVelocity.y);
+    }
+
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            isGrounded = true;
+        }
+    }
+
+    void OnCollisionExit2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            isGrounded = false;
+        }
     }
 }

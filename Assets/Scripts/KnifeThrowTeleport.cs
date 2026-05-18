@@ -7,8 +7,17 @@ public class KnifeThrowTeleport : MonoBehaviour
     [SerializeField] private GameObject knifePrefab;
     [SerializeField] private Transform throwPoint;
     [SerializeField] private float throwSpeed = 10f;
+    [SerializeField] private Camera mainCamera;
 
     private GameObject activeKnife;
+
+    private void Start()
+    {
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+        }
+    }
 
     public void OnFire(InputValue value)
     {
@@ -30,11 +39,26 @@ public class KnifeThrowTeleport : MonoBehaviour
             return;
         }
 
+        if (mainCamera == null)
+        {
+            Debug.LogWarning("KnifeThrowTeleport: mainCamera is not assigned.");
+            return;
+        }
+
+        Vector2 mouseScreenPosition = Mouse.current.position.ReadValue();
+        Vector3 mouseWorldPosition = mainCamera.ScreenToWorldPoint(mouseScreenPosition);
+        mouseWorldPosition.z = 0f;
+
+        Vector2 throwDirection = ((Vector2)mouseWorldPosition - (Vector2)throwPoint.position).normalized;
+
         activeKnife = Instantiate(
             knifePrefab,
             throwPoint.position,
-            throwPoint.rotation
+            Quaternion.identity
         );
+
+        float angle = Mathf.Atan2(throwDirection.y, throwDirection.x) * Mathf.Rad2Deg;
+        activeKnife.transform.rotation = Quaternion.Euler(0f, 0f, angle);
 
         Rigidbody2D rb = activeKnife.GetComponent<Rigidbody2D>();
 
@@ -46,7 +70,7 @@ public class KnifeThrowTeleport : MonoBehaviour
             return;
         }
 
-        rb.linearVelocity = transform.right * throwSpeed;
+        rb.linearVelocity = throwDirection * throwSpeed;
     }
 
     public void OnTeleport(InputValue value)

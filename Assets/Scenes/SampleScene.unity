@@ -1024,6 +1024,14 @@ MonoBehaviour:
   knifePrefab: {fileID: 6558331791977726706, guid: e021615ecd26641ddbdfb4892afed6e1, type: 3}
   throwPoint: {fileID: 1918734163}
   throwSpeed: 10
+  mainCamera: {fileID: 0}
+  stickableLayers:
+    serializedVersion: 2
+    m_Bits: 1
+  stickToEnemies: 0
+  embedOffset: 0.05
+  minimumStickTravelDistance: 0.35
+  spawnOffsetFromBody: 0.1
 --- !u!1 &1234482396
 GameObject:
   m_ObjectHideFlags: 0

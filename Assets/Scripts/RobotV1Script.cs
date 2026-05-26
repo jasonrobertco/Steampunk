@@ -131,7 +131,7 @@ public class RobotV1Script : MonoBehaviour
         if (damageTimer > 0f || !IsOverlappingPlayer())
             return;
 
-        playerHealth.TakeDamage(damageAmount);
+        playerHealth.TakeDamage(damageAmount, transform.position);
         damageTimer = damageInterval;
     }
 

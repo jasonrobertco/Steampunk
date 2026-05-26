@@ -5,13 +5,21 @@ using UnityEngine.InputSystem;
 public class PlayerControllerScript : MonoBehaviour
 {
     public float speed = 5f;
-    public float jumpForce = 8f;
+    public float jumpForce = 12f;
     [SerializeField] private float knockbackControlLockDuration = 0.12f;
+    [SerializeField] private float dashSpeed = 14f;
+    [SerializeField] private float dashDuration = 0.12f;
+    [SerializeField] private float dashRestoreCooldown = 1f;
 
     private float moveX;
+    private Vector2 moveInput;
     private Rigidbody2D rb;
     private bool isGrounded;
     private float knockbackControlLockTimer;
+    private float dashTimer;
+    private float dashRestoreTimer;
+    private bool hasDash = true;
+    private Vector2 dashDirection = Vector2.right;
 
     void Start()
     {
@@ -20,8 +28,13 @@ public class PlayerControllerScript : MonoBehaviour
 
     void OnMove(InputValue value)
     {
-        Vector2 input = value.Get<Vector2>();
-        moveX = input.x;
+        moveInput = value.Get<Vector2>();
+        moveX = moveInput.x;
+
+        if (moveInput.sqrMagnitude > 0.01f)
+        {
+            dashDirection = GetCardinalDirection(moveInput);
+        }
     }
 
     void OnJump(InputValue value)
@@ -41,7 +54,44 @@ public class PlayerControllerScript : MonoBehaviour
             return;
         }
 
+        if (dashRestoreTimer > 0f)
+        {
+            dashRestoreTimer -= Time.fixedDeltaTime;
+        }
+
+        // The dash only comes back after the cooldown has finished and the player is grounded.
+        if (!hasDash && isGrounded && dashRestoreTimer <= 0f)
+        {
+            hasDash = true;
+        }
+
+        if (dashTimer > 0f)
+        {
+            dashTimer -= Time.fixedDeltaTime;
+            rb.linearVelocity = dashDirection * dashSpeed;
+            return;
+        }
+
         rb.linearVelocity = new Vector2(moveX * speed, rb.linearVelocity.y);
+    }
+
+    void OnDash(InputValue value)
+    {
+        if (!value.isPressed)
+            return;
+
+        if (!hasDash)
+            return;
+
+        if (moveInput.sqrMagnitude <= 0.01f)
+            return;
+
+        // Dash in the strongest held direction, then spend the stored dash.
+        dashDirection = GetCardinalDirection(moveInput);
+        hasDash = false;
+        dashTimer = dashDuration;
+        dashRestoreTimer = dashRestoreCooldown;
+        rb.linearVelocity = dashDirection * dashSpeed;
     }
 
     public void ApplyKnockback(Vector2 force)
@@ -49,9 +99,20 @@ public class PlayerControllerScript : MonoBehaviour
         if (rb == null)
             rb = GetComponent<Rigidbody2D>();
 
+        dashTimer = 0f;
         rb.linearVelocity = Vector2.zero;
         rb.AddForce(force, ForceMode2D.Impulse);
         knockbackControlLockTimer = knockbackControlLockDuration;
+    }
+
+    private Vector2 GetCardinalDirection(Vector2 input)
+    {
+        if (Mathf.Abs(input.x) >= Mathf.Abs(input.y))
+        {
+            return input.x >= 0f ? Vector2.right : Vector2.left;
+        }
+
+        return input.y >= 0f ? Vector2.up : Vector2.down;
     }
 
     void OnCollisionEnter2D(Collision2D collision)

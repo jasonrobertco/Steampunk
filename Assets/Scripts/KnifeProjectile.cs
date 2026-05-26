@@ -100,7 +100,17 @@ public class KnifeProjectile : MonoBehaviour
 
         Collider2D hitCollider = collision.collider;
 
-        if (hitCollider == null || IsOwner(hitCollider) || !IsStickableTarget(hitCollider))
+        if (hitCollider == null || IsOwner(hitCollider))
+        {
+            return;
+        }
+
+        if (TryDestroyEnemy(hitCollider))
+        {
+            return;
+        }
+
+        if (!IsStickableTarget(hitCollider))
         {
             return;
         }
@@ -159,6 +169,41 @@ public class KnifeProjectile : MonoBehaviour
             : hitCollider.transform.root;
 
         return hitRoot == ownerRoot.root;
+    }
+
+    private bool TryDestroyEnemy(Collider2D hitCollider)
+    {
+        GameObject hitObject = hitCollider.attachedRigidbody != null
+            ? hitCollider.attachedRigidbody.gameObject
+            : hitCollider.gameObject;
+
+        if (hitObject == null)
+        {
+            return false;
+        }
+
+        RobotV1Script robot = hitObject.GetComponentInParent<RobotV1Script>();
+        GameObject enemyObject = robot != null ? robot.gameObject : hitObject;
+
+        string hitTag = hitObject.tag;
+        string enemyTag = enemyObject.tag;
+        bool isTaggedEnemy = enemyTag == EnemyTag || enemyTag == EnemyStickableTag;
+        bool isRobotEnemy = robot != null && (
+            hitTag == EnemyTag
+            || hitTag == EnemyStickableTag
+            || enemyTag == EnemyTag
+            || enemyTag == EnemyStickableTag
+        );
+
+        if (!isTaggedEnemy && !isRobotEnemy)
+        {
+            return false;
+        }
+
+        Debug.Log($"Knife hit robot: {enemyObject.name}");
+        Destroy(enemyObject);
+        Destroy(gameObject);
+        return true;
     }
 
     private void StickIntoSurface(Collision2D collision)

@@ -14,6 +14,7 @@ public class KnifeThrowTeleport : MonoBehaviour
     [SerializeField] private float embedOffset = 0.05f;
     [SerializeField] private float minimumStickTravelDistance = 0.35f;
     [SerializeField] private float spawnOffsetFromBody = 0.1f;
+    [SerializeField] private float maxKnifeLifetime = 0.5f;
 
     private GameObject activeKnife;
     private Collider2D playerCollider;
@@ -27,6 +28,19 @@ public class KnifeThrowTeleport : MonoBehaviour
         if (mainCamera == null)
         {
             mainCamera = Camera.main;
+        }
+    }
+
+    private void Update()
+    {
+        if (activeKnife == null)
+        {
+            return;
+        }
+
+        if (!activeKnife)
+        {
+            activeKnife = null;
         }
     }
 
@@ -111,7 +125,8 @@ public class KnifeThrowTeleport : MonoBehaviour
             stickToEnemies,
             embedOffset,
             throwDirection,
-            minimumStickTravelDistance
+            minimumStickTravelDistance,
+            maxKnifeLifetime
         );
 
         rb.linearVelocity = throwDirection * throwSpeed;

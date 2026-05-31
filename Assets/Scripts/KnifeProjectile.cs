@@ -13,8 +13,21 @@ public class KnifeProjectile : MonoBehaviour
     private const string EnemyTag = "Enemy";
     private const string EnemyStickableTag = "EnemyStickable";
 
+    [SerializeField] private int impactParticleCount = 10;
+    [SerializeField] private float impactParticleLifetime = 0.2f;
+    [SerializeField] private float impactParticleSpeed = 3.5f;
+    [SerializeField] private float impactParticleSize = 0.12f;
+    [SerializeField] private Color impactParticleStartColor = new Color(1f, 1f, 1f, 1f);
+    [SerializeField] private Color impactParticleEndColor = new Color(1f, 1f, 1f, 0f);
+    [SerializeField] private float trailSpawnInterval = 0.03f;
+    [SerializeField] private float trailGhostLifetime = 0.25f;
+    [SerializeField] private float trailGhostScale = 0.9f;
+    [SerializeField] private Color trailGhostStartColor = new Color(1f, 1f, 1f, 0.75f);
+    [SerializeField] private Color trailGhostEndColor = new Color(1f, 1f, 1f, 0f);
+
     private Rigidbody2D rb;
     private Collider2D knifeCollider;
+    private SpriteRenderer knifeSpriteRenderer;
     private Transform ownerRoot;
     private LayerMask stickableLayers;
     private bool stickToEnemies;
@@ -26,6 +39,9 @@ public class KnifeProjectile : MonoBehaviour
     private Quaternion stuckLocalRotation;
     private Vector3 spawnPosition;
     private float minimumStickTravelDistance;
+    private float trailSpawnTimer;
+    private float maxFlightLifetime;
+    private float flightTimer;
 
     public bool HasStuck => hasStuck;
 
@@ -33,6 +49,7 @@ public class KnifeProjectile : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         knifeCollider = GetComponent<Collider2D>();
+        knifeSpriteRenderer = GetComponentInChildren<SpriteRenderer>();
     }
 
     public void Initialize(
@@ -41,13 +58,16 @@ public class KnifeProjectile : MonoBehaviour
         bool allowEnemyStick,
         float impactEmbedOffset,
         Vector2 initialDirection,
-        float minStickDistance)
+        float minStickDistance,
+        float maxLifetime)
     {
         ownerRoot = owner;
         stickableLayers = allowedStickableLayers;
         stickToEnemies = allowEnemyStick;
         embedOffset = impactEmbedOffset;
         minimumStickTravelDistance = Mathf.Max(0f, minStickDistance);
+        maxFlightLifetime = Mathf.Max(0f, maxLifetime);
+        flightTimer = 0f;
         spawnPosition = transform.position;
 
         if (initialDirection.sqrMagnitude > 0.0001f)
@@ -65,11 +85,30 @@ public class KnifeProjectile : MonoBehaviour
             return;
         }
 
+        if (maxFlightLifetime > 0f)
+        {
+            flightTimer += Time.fixedDeltaTime;
+
+            if (flightTimer >= maxFlightLifetime)
+            {
+                Destroy(gameObject);
+                return;
+            }
+        }
+
         // Keep tracking the latest travel direction so the knife can remain
         // visually aligned when it embeds into a surface.
         if (rb.linearVelocity.sqrMagnitude > 0.0001f)
         {
             lastMoveDirection = rb.linearVelocity.normalized;
+        }
+
+        trailSpawnTimer -= Time.fixedDeltaTime;
+
+        if (trailSpawnTimer <= 0f)
+        {
+            SpawnTrailGhost();
+            trailSpawnTimer = trailSpawnInterval;
         }
     }
 
@@ -201,6 +240,7 @@ public class KnifeProjectile : MonoBehaviour
         }
 
         Debug.Log($"Knife hit robot: {enemyObject.name}");
+        SpawnImpactParticles(hitCollider.ClosestPoint(transform.position));
         Destroy(enemyObject);
         Destroy(gameObject);
         return true;
@@ -211,6 +251,7 @@ public class KnifeProjectile : MonoBehaviour
         hasStuck = true;
 
         ContactPoint2D contact = collision.GetContact(0);
+        SpawnImpactParticles(contact.point);
         Vector2 embedDirection = lastMoveDirection.sqrMagnitude > 0.0001f
             ? lastMoveDirection
             : (Vector2)transform.right;
@@ -264,6 +305,126 @@ public class KnifeProjectile : MonoBehaviour
             {
                 Physics2D.IgnoreCollision(knifeCollider, ownerCollider, true);
             }
+        }
+    }
+
+    private void SpawnImpactParticles(Vector2 position)
+    {
+        GameObject particleObject = new GameObject("KnifeImpactParticles");
+        particleObject.transform.position = position;
+
+        ParticleSystem particles = particleObject.AddComponent<ParticleSystem>();
+        var main = particles.main;
+        main.loop = false;
+        main.playOnAwake = false;
+        main.duration = impactParticleLifetime;
+        main.startLifetime = impactParticleLifetime;
+        main.startSpeed = impactParticleSpeed;
+        main.startSize = impactParticleSize;
+        main.startColor = new ParticleSystem.MinMaxGradient(impactParticleStartColor, impactParticleEndColor);
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.gravityModifier = 0f;
+
+        var emission = particles.emission;
+        emission.rateOverTime = 0f;
+        emission.SetBursts(new[]
+        {
+            new ParticleSystem.Burst(0f, (short)impactParticleCount)
+        });
+
+        var shape = particles.shape;
+        shape.shapeType = ParticleSystemShapeType.Circle;
+        shape.radius = 0.08f;
+
+        var colorOverLifetime = particles.colorOverLifetime;
+        colorOverLifetime.enabled = true;
+        Gradient fadeGradient = new Gradient();
+        fadeGradient.SetKeys(
+            new[]
+            {
+                new GradientColorKey(impactParticleStartColor, 0f),
+                new GradientColorKey(impactParticleEndColor, 1f)
+            },
+            new[]
+            {
+                new GradientAlphaKey(impactParticleStartColor.a, 0f),
+                new GradientAlphaKey(impactParticleEndColor.a, 1f)
+            }
+        );
+        colorOverLifetime.color = new ParticleSystem.MinMaxGradient(fadeGradient);
+
+        var sizeOverLifetime = particles.sizeOverLifetime;
+        sizeOverLifetime.enabled = true;
+        AnimationCurve sizeCurve = new AnimationCurve(
+            new Keyframe(0f, 1f),
+            new Keyframe(1f, 0f)
+        );
+        sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
+
+        particles.Play();
+        Destroy(particleObject, impactParticleLifetime + 0.2f);
+    }
+
+    private void SpawnTrailGhost()
+    {
+        if (knifeSpriteRenderer == null || knifeSpriteRenderer.sprite == null)
+        {
+            return;
+        }
+
+        GameObject ghostObject = new GameObject("KnifeTrailGhost");
+        ghostObject.transform.position = knifeSpriteRenderer.transform.position;
+        ghostObject.transform.rotation = knifeSpriteRenderer.transform.rotation;
+        ghostObject.transform.localScale = knifeSpriteRenderer.transform.lossyScale * trailGhostScale;
+
+        SpriteRenderer ghostRenderer = ghostObject.AddComponent<SpriteRenderer>();
+        ghostRenderer.sprite = knifeSpriteRenderer.sprite;
+        ghostRenderer.sharedMaterial = knifeSpriteRenderer.sharedMaterial;
+        ghostRenderer.sortingLayerID = knifeSpriteRenderer.sortingLayerID;
+        ghostRenderer.sortingOrder = knifeSpriteRenderer.sortingOrder - 1;
+        ghostRenderer.color = trailGhostStartColor;
+
+        KnifeTrailGhost ghost = ghostObject.AddComponent<KnifeTrailGhost>();
+        ghost.Initialize(ghostRenderer, trailGhostLifetime, trailGhostStartColor, trailGhostEndColor);
+    }
+}
+
+public class KnifeTrailGhost : MonoBehaviour
+{
+    private SpriteRenderer spriteRenderer;
+    private float lifetime;
+    private float timer;
+    private Color startColor;
+    private Color endColor;
+
+    public void Initialize(
+        SpriteRenderer targetRenderer,
+        float fadeLifetime,
+        Color fadeStartColor,
+        Color fadeEndColor)
+    {
+        spriteRenderer = targetRenderer;
+        lifetime = Mathf.Max(0.01f, fadeLifetime);
+        startColor = fadeStartColor;
+        endColor = fadeEndColor;
+        timer = 0f;
+    }
+
+    private void Update()
+    {
+        if (spriteRenderer == null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        timer += Time.deltaTime;
+        float progress = Mathf.Clamp01(timer / lifetime);
+        spriteRenderer.color = Color.Lerp(startColor, endColor, progress);
+
+        if (progress >= 1f)
+        {
+            Destroy(gameObject);
         }
     }
 }

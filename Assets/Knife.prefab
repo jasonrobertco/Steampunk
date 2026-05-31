@@ -179,3 +179,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b061d5ef34754358b84114face7340ee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
+  impactParticleCount: 10
+  impactParticleLifetime: 0.2
+  impactParticleSpeed: 3.5
+  impactParticleSize: 0.12
+  impactParticleStartColor: {r: 1, g: 1, b: 1, a: 1}
+  impactParticleEndColor: {r: 1, g: 1, b: 1, a: 0}
+  trailSpawnInterval: 0.07
+  trailGhostLifetime: 0.25
+  trailGhostScale: 0.9
+  trailGhostStartColor: {r: 1, g: 1, b: 1, a: 0.75}
+  trailGhostEndColor: {r: 1, g: 1, b: 1, a: 0}

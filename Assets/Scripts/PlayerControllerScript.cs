@@ -10,6 +10,8 @@ public class PlayerControllerScript : MonoBehaviour
     [SerializeField] private float dashSpeed = 14f;
     [SerializeField] private float dashDuration = 0.12f;
     [SerializeField] private float dashRestoreCooldown = 1f;
+    [SerializeField] private Transform visualRoot;
+    [SerializeField] private bool facesRightByDefault = true;
 
     private float moveX;
     private Vector2 moveInput;
@@ -20,16 +22,37 @@ public class PlayerControllerScript : MonoBehaviour
     private float dashRestoreTimer;
     private bool hasDash = true;
     private Vector2 dashDirection = Vector2.right;
+    private bool isFacingRight = true;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+
+        if (visualRoot == null)
+        {
+            Animator animator = GetComponentInChildren<Animator>();
+            visualRoot = animator != null ? animator.transform : transform;
+        }
+
+        isFacingRight = facesRightByDefault;
+        ApplyFacingDirection();
     }
 
     void OnMove(InputValue value)
     {
         moveInput = value.Get<Vector2>();
         moveX = moveInput.x;
+
+        if (moveX < -0.01f)
+        {
+            isFacingRight = false;
+            ApplyFacingDirection();
+        }
+        else if (moveX > 0.01f)
+        {
+            isFacingRight = true;
+            ApplyFacingDirection();
+        }
 
         if (moveInput.sqrMagnitude > 0.01f)
         {
@@ -113,6 +136,17 @@ public class PlayerControllerScript : MonoBehaviour
         }
 
         return input.y >= 0f ? Vector2.up : Vector2.down;
+    }
+
+    private void ApplyFacingDirection()
+    {
+        if (visualRoot == null)
+            return;
+
+        Vector3 scale = visualRoot.localScale;
+        float baseXScale = Mathf.Abs(scale.x);
+        scale.x = (isFacingRight == facesRightByDefault ? 1f : -1f) * baseXScale;
+        visualRoot.localScale = scale;
     }
 
     void OnCollisionEnter2D(Collision2D collision)

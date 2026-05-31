@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 public class KnifeThrowTeleport : MonoBehaviour
 {
     [Header("Knife Settings")]
+    [SerializeField] private Animator animator;
     [SerializeField] private GameObject knifePrefab;
     [SerializeField] private Transform throwPoint;
     [SerializeField] private float throwSpeed = 10f;
@@ -36,6 +37,11 @@ public class KnifeThrowTeleport : MonoBehaviour
 
         if (activeKnife != null)
             return;
+
+        if (animator != null)
+        {
+            animator.SetTrigger("Throw");
+        }
 
         if (knifePrefab == null)
         {

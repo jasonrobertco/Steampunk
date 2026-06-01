@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(Collider2D))]
 public class PlayerControllerScript : MonoBehaviour
 {
     public float speed = 5f;
@@ -9,24 +10,36 @@ public class PlayerControllerScript : MonoBehaviour
     [SerializeField] private float knockbackControlLockDuration = 0.12f;
     [SerializeField] private float dashSpeed = 14f;
     [SerializeField] private float dashDuration = 0.12f;
-    [SerializeField] private float dashRestoreCooldown = 1f;
+    [SerializeField] private float dashRestoreCooldown = 0.15f;
     [SerializeField] private Transform visualRoot;
     [SerializeField] private bool facesRightByDefault = true;
+    [SerializeField] private float groundCheckDistance = 0.08f;
+    [SerializeField] [Range(0f, 1f)] private float groundedNormalThreshold = 0.35f;
 
     private float moveX;
     private Vector2 moveInput;
     private Rigidbody2D rb;
+    private Collider2D bodyCollider;
     private bool isGrounded;
     private float knockbackControlLockTimer;
     private float dashTimer;
     private float dashRestoreTimer;
     private bool hasDash = true;
+    private bool dashResetPending;
     private Vector2 dashDirection = Vector2.right;
     private bool isFacingRight = true;
+    private bool wasGrounded;
+    private readonly RaycastHit2D[] groundHits = new RaycastHit2D[8];
+    private ContactFilter2D groundContactFilter;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        bodyCollider = GetComponent<Collider2D>();
+        groundContactFilter = new ContactFilter2D
+        {
+            useTriggers = false
+        };
 
         if (visualRoot == null)
         {
@@ -35,6 +48,8 @@ public class PlayerControllerScript : MonoBehaviour
         }
 
         isFacingRight = facesRightByDefault;
+        isGrounded = CheckGrounded();
+        wasGrounded = isGrounded;
         ApplyFacingDirection();
     }
 
@@ -71,6 +86,16 @@ public class PlayerControllerScript : MonoBehaviour
 
     void FixedUpdate()
     {
+        bool groundedNow = CheckGrounded();
+
+        if (!wasGrounded && groundedNow)
+        {
+            ScheduleDashRestore();
+        }
+
+        isGrounded = groundedNow;
+        wasGrounded = groundedNow;
+
         if (knockbackControlLockTimer > 0f)
         {
             knockbackControlLockTimer -= Time.fixedDeltaTime;
@@ -82,10 +107,10 @@ public class PlayerControllerScript : MonoBehaviour
             dashRestoreTimer -= Time.fixedDeltaTime;
         }
 
-        // The dash only comes back after the cooldown has finished and the player is grounded.
-        if (!hasDash && isGrounded && dashRestoreTimer <= 0f)
+        if (!hasDash && dashResetPending && dashRestoreTimer <= 0f)
         {
             hasDash = true;
+            dashResetPending = false;
         }
 
         if (dashTimer > 0f)
@@ -113,7 +138,14 @@ public class PlayerControllerScript : MonoBehaviour
         dashDirection = GetCardinalDirection(moveInput);
         hasDash = false;
         dashTimer = dashDuration;
-        dashRestoreTimer = dashRestoreCooldown;
+        dashResetPending = false;
+        dashRestoreTimer = 0f;
+
+        if (isGrounded)
+        {
+            ScheduleDashRestore();
+        }
+
         rb.linearVelocity = dashDirection * dashSpeed;
     }
 
@@ -126,6 +158,11 @@ public class PlayerControllerScript : MonoBehaviour
         rb.linearVelocity = Vector2.zero;
         rb.AddForce(force, ForceMode2D.Impulse);
         knockbackControlLockTimer = knockbackControlLockDuration;
+    }
+
+    public void NotifyTeleported()
+    {
+        ScheduleDashRestore();
     }
 
     private Vector2 GetCardinalDirection(Vector2 input)
@@ -149,19 +186,41 @@ public class PlayerControllerScript : MonoBehaviour
         visualRoot.localScale = scale;
     }
 
-    void OnCollisionEnter2D(Collision2D collision)
+    private void ScheduleDashRestore()
     {
-        if (collision.gameObject.CompareTag("Ground"))
+        if (hasDash)
         {
-            isGrounded = true;
+            return;
         }
+
+        dashResetPending = true;
+        dashRestoreTimer = dashRestoreCooldown;
     }
 
-    void OnCollisionExit2D(Collision2D collision)
+    private bool CheckGrounded()
     {
-        if (collision.gameObject.CompareTag("Ground"))
+        if (bodyCollider == null)
         {
-            isGrounded = false;
+            return false;
         }
+
+        int hitCount = bodyCollider.Cast(Vector2.down, groundContactFilter, groundHits, groundCheckDistance);
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            RaycastHit2D hit = groundHits[i];
+
+            if (hit.collider == null || !hit.collider.CompareTag("Ground"))
+            {
+                continue;
+            }
+
+            if (hit.normal.y >= groundedNormalThreshold)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

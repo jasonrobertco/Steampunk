@@ -1,5 +1,8 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class KnifeThrowTeleport : MonoBehaviour
 {
@@ -16,18 +19,35 @@ public class KnifeThrowTeleport : MonoBehaviour
     [SerializeField] private float spawnOffsetFromBody = 0.1f;
     [SerializeField] private float maxKnifeLifetime = 0.5f;
 
+    [Header("Teleport VFX")]
+    [SerializeField] private Sprite[] teleportBurstFrames;
+    [SerializeField] private float teleportBurstFrameRate = 24f;
+    [SerializeField] private Vector3 teleportBurstOffset = new Vector3(0f, 0.5f, 0f);
+    [SerializeField] private Vector3 teleportBurstScale = new Vector3(1.5f, 1.5f, 1f);
+    [SerializeField] private int teleportBurstSortingOrderOffset = 2;
+    [SerializeField] private CameraFollow cameraFollow;
+
     private GameObject activeKnife;
     private Collider2D playerCollider;
+    private PlayerControllerScript playerController;
     private Rigidbody2D playerRb;
+    private SpriteRenderer playerSpriteRenderer;
 
     private void Start()
     {
         playerCollider = GetComponent<Collider2D>();
+        playerController = GetComponent<PlayerControllerScript>();
         playerRb = GetComponent<Rigidbody2D>();
+        playerSpriteRenderer = GetComponentInChildren<SpriteRenderer>();
 
         if (mainCamera == null)
         {
             mainCamera = Camera.main;
+        }
+
+        if (cameraFollow == null && mainCamera != null)
+        {
+            cameraFollow = mainCamera.GetComponent<CameraFollow>();
         }
     }
 
@@ -154,7 +174,10 @@ public class KnifeThrowTeleport : MonoBehaviour
         if (activeKnife == null)
             return;
 
+        SpawnTeleportBurst(transform.position + teleportBurstOffset);
         transform.position = activeKnife.transform.position;
+        SpawnTeleportBurst(transform.position + teleportBurstOffset);
+        cameraFollow?.PlayImpactShake();
 
         // Reset carried momentum so gravity starts naturally from the new spot.
         if (playerRb != null)
@@ -163,7 +186,68 @@ public class KnifeThrowTeleport : MonoBehaviour
             playerRb.angularVelocity = 0f;
         }
 
+        playerController?.NotifyTeleported();
+
         Destroy(activeKnife);
         activeKnife = null;
     }
+
+    private void SpawnTeleportBurst(Vector3 worldPosition)
+    {
+        if (teleportBurstFrames == null || teleportBurstFrames.Length == 0)
+        {
+            return;
+        }
+
+        GameObject burstObject = new GameObject("TeleportBurst");
+        burstObject.transform.position = worldPosition;
+        burstObject.transform.localScale = teleportBurstScale;
+
+        SpriteRenderer burstRenderer = burstObject.AddComponent<SpriteRenderer>();
+        burstRenderer.sprite = teleportBurstFrames[0];
+
+        if (playerSpriteRenderer != null)
+        {
+            burstRenderer.sharedMaterial = playerSpriteRenderer.sharedMaterial;
+            burstRenderer.sortingLayerID = playerSpriteRenderer.sortingLayerID;
+            burstRenderer.sortingOrder = playerSpriteRenderer.sortingOrder + teleportBurstSortingOrderOffset;
+        }
+
+        TeleportBurstEffect burstEffect = burstObject.AddComponent<TeleportBurstEffect>();
+        burstEffect.Initialize(burstRenderer, teleportBurstFrames, teleportBurstFrameRate);
+    }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (teleportBurstFrames != null && teleportBurstFrames.Length > 0)
+        {
+            return;
+        }
+
+        const string effectFolder = "Assets/Sprites/Super Pixel Effects Mini Pack 1/PNG/fx2_electric_burst_large_violet";
+        string[] frameGuids = AssetDatabase.FindAssets("t:Sprite", new[] { effectFolder });
+
+        if (frameGuids == null || frameGuids.Length == 0)
+        {
+            return;
+        }
+
+        System.Array.Sort(frameGuids, CompareFrameGuids);
+        teleportBurstFrames = new Sprite[frameGuids.Length];
+
+        for (int i = 0; i < frameGuids.Length; i++)
+        {
+            string assetPath = AssetDatabase.GUIDToAssetPath(frameGuids[i]);
+            teleportBurstFrames[i] = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        }
+    }
+
+    private static int CompareFrameGuids(string leftGuid, string rightGuid)
+    {
+        string leftPath = AssetDatabase.GUIDToAssetPath(leftGuid);
+        string rightPath = AssetDatabase.GUIDToAssetPath(rightGuid);
+        return string.CompareOrdinal(leftPath, rightPath);
+    }
+#endif
 }

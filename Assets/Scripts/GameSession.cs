@@ -10,6 +10,7 @@ public class GameSession : MonoBehaviour
     public const int StartingLives = 7;
     public const string StartSceneName = "StartScreen";
     public const string GameplaySceneName = "SampleScene";
+    public const string VictorySceneName = "VictoryScreen";
     public const string GameOverSceneName = "GameOverScreen";
 
     private static GameSession instance;
@@ -31,7 +32,9 @@ public class GameSession : MonoBehaviour
         get
         {
             string activeSceneName = SceneManager.GetActiveScene().name;
-            return activeSceneName != StartSceneName && activeSceneName != GameOverSceneName;
+            return activeSceneName != StartSceneName
+                && activeSceneName != VictorySceneName
+                && activeSceneName != GameOverSceneName;
         }
     }
 

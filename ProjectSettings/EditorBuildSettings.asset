@@ -15,6 +15,9 @@ EditorBuildSettings:
     path: Assets/Scenes/Boss fight.unity
     guid: 362caa5037fc74f3eaf14c0016224c2a
   - enabled: 1
+    path: Assets/Scenes/VictoryScreen.unity
+    guid: 13ef4ed8be714c53a7084b9b8bf1662d
+  - enabled: 1
     path: Assets/Scenes/GameOverScreen.unity
     guid: ff257cb1776f490fba902de5fc8a1a7a
   m_configObjects:

@@ -1,4 +1,7 @@
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// Handles the thrown knife's collision behavior so it can stick in place
@@ -24,6 +27,10 @@ public class KnifeProjectile : MonoBehaviour
     [SerializeField] private float trailGhostScale = 0.9f;
     [SerializeField] private Color trailGhostStartColor = new Color(1f, 1f, 1f, 0.75f);
     [SerializeField] private Color trailGhostEndColor = new Color(1f, 1f, 1f, 0f);
+    [SerializeField] private Sprite[] laserAbsorbExplosionFrames;
+    [SerializeField] private float laserAbsorbExplosionFrameRate = 24f;
+    [SerializeField] private Vector3 laserAbsorbExplosionScale = new Vector3(1.2f, 1.2f, 1f);
+    [SerializeField] private int laserAbsorbExplosionSortingOrderOffset = 1;
 
     private Rigidbody2D rb;
     private Collider2D knifeCollider;
@@ -42,6 +49,8 @@ public class KnifeProjectile : MonoBehaviour
     private float trailSpawnTimer;
     private float maxFlightLifetime;
     private float flightTimer;
+    private bool isReturningToPlayer;
+    private KnifeThrowTeleport ownerThrowController;
 
     public bool HasStuck => hasStuck;
 
@@ -53,6 +62,7 @@ public class KnifeProjectile : MonoBehaviour
     }
 
     public void Initialize(
+        KnifeThrowTeleport ownerController,
         Transform owner,
         LayerMask allowedStickableLayers,
         bool allowEnemyStick,
@@ -61,6 +71,7 @@ public class KnifeProjectile : MonoBehaviour
         float minStickDistance,
         float maxLifetime)
     {
+        ownerThrowController = ownerController;
         ownerRoot = owner;
         stickableLayers = allowedStickableLayers;
         stickToEnemies = allowEnemyStick;
@@ -80,7 +91,7 @@ public class KnifeProjectile : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (hasStuck)
+        if (hasStuck || isReturningToPlayer)
         {
             return;
         }
@@ -91,7 +102,7 @@ public class KnifeProjectile : MonoBehaviour
 
             if (flightTimer >= maxFlightLifetime)
             {
-                Destroy(gameObject);
+                ReturnToPlayer();
                 return;
             }
         }
@@ -127,7 +138,7 @@ public class KnifeProjectile : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (hasStuck || collision.contactCount == 0)
+        if (hasStuck || isReturningToPlayer || collision.contactCount == 0)
         {
             return;
         }
@@ -155,6 +166,22 @@ public class KnifeProjectile : MonoBehaviour
         }
 
         StickIntoSurface(collision);
+    }
+
+    public void AbsorbIntoLaser()
+    {
+        if (isReturningToPlayer)
+        {
+            return;
+        }
+
+        SpawnLaserAbsorbExplosion();
+        ReturnToPlayer();
+    }
+
+    private void OnDestroy()
+    {
+        ownerThrowController?.NotifyKnifeReturned(gameObject);
     }
 
     private bool CanStickYet()
@@ -242,8 +269,20 @@ public class KnifeProjectile : MonoBehaviour
         Debug.Log($"Knife hit robot: {enemyObject.name}");
         SpawnImpactParticles(hitCollider.ClosestPoint(transform.position));
         Destroy(enemyObject);
-        Destroy(gameObject);
+        ReturnToPlayer();
         return true;
+    }
+
+    private void ReturnToPlayer()
+    {
+        if (isReturningToPlayer)
+        {
+            return;
+        }
+
+        isReturningToPlayer = true;
+        ownerThrowController?.NotifyKnifeReturned(gameObject);
+        Destroy(gameObject);
     }
 
     private void StickIntoSurface(Collision2D collision)
@@ -387,6 +426,65 @@ public class KnifeProjectile : MonoBehaviour
         KnifeTrailGhost ghost = ghostObject.AddComponent<KnifeTrailGhost>();
         ghost.Initialize(ghostRenderer, trailGhostLifetime, trailGhostStartColor, trailGhostEndColor);
     }
+
+    private void SpawnLaserAbsorbExplosion()
+    {
+        if (laserAbsorbExplosionFrames == null || laserAbsorbExplosionFrames.Length == 0)
+        {
+            return;
+        }
+
+        GameObject effectObject = new GameObject("KnifeLaserAbsorbExplosion");
+        effectObject.transform.position = transform.position;
+        effectObject.transform.localScale = laserAbsorbExplosionScale;
+
+        SpriteRenderer effectRenderer = effectObject.AddComponent<SpriteRenderer>();
+        effectRenderer.sprite = laserAbsorbExplosionFrames[0];
+
+        if (knifeSpriteRenderer != null)
+        {
+            effectRenderer.sharedMaterial = knifeSpriteRenderer.sharedMaterial;
+            effectRenderer.sortingLayerID = knifeSpriteRenderer.sortingLayerID;
+            effectRenderer.sortingOrder = knifeSpriteRenderer.sortingOrder + laserAbsorbExplosionSortingOrderOffset;
+        }
+
+        OneShotSpriteEffect effect = effectObject.AddComponent<OneShotSpriteEffect>();
+        effect.Initialize(effectRenderer, laserAbsorbExplosionFrames, laserAbsorbExplosionFrameRate);
+    }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (laserAbsorbExplosionFrames != null && laserAbsorbExplosionFrames.Length > 0)
+        {
+            return;
+        }
+
+        const string effectFolder = "Assets/Sprites/Super Pixel Effects Mini Pack 1/PNG/fx1_explosion_small_orange";
+        string[] frameGuids = AssetDatabase.FindAssets("t:Sprite", new[] { effectFolder });
+
+        if (frameGuids == null || frameGuids.Length == 0)
+        {
+            return;
+        }
+
+        System.Array.Sort(frameGuids, CompareFrameGuids);
+        laserAbsorbExplosionFrames = new Sprite[frameGuids.Length];
+
+        for (int i = 0; i < frameGuids.Length; i++)
+        {
+            string assetPath = AssetDatabase.GUIDToAssetPath(frameGuids[i]);
+            laserAbsorbExplosionFrames[i] = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        }
+    }
+
+    private static int CompareFrameGuids(string leftGuid, string rightGuid)
+    {
+        string leftPath = AssetDatabase.GUIDToAssetPath(leftGuid);
+        string rightPath = AssetDatabase.GUIDToAssetPath(rightGuid);
+        return string.CompareOrdinal(leftPath, rightPath);
+    }
+#endif
 }
 
 public class KnifeTrailGhost : MonoBehaviour

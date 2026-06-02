@@ -64,6 +64,14 @@ public class KnifeThrowTeleport : MonoBehaviour
         }
     }
 
+    public void NotifyKnifeReturned(GameObject knife)
+    {
+        if (activeKnife == knife)
+        {
+            activeKnife = null;
+        }
+    }
+
     public void OnFire(InputValue value)
     {
         if (!value.isPressed)
@@ -140,6 +148,7 @@ public class KnifeThrowTeleport : MonoBehaviour
         // Pass the thrower and stick settings to the projectile so it can ignore
         // the player and lock itself in place on approved surfaces.
         projectile.Initialize(
+            this,
             transform,
             stickableLayers,
             stickToEnemies,

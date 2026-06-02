@@ -192,6 +192,11 @@ public class PlayerHealth : MonoBehaviour
 
     public float HealthPercent => (float)currentHealth / maxHealth;
 
+    public void KillInstantly()
+    {
+        LoseLife();
+    }
+
     private void LoseLife()
     {
         if (isDead)

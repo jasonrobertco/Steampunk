@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 606390151085007336}
   - component: {fileID: 8270200477558995425}
   - component: {fileID: 4872213879012456789}
+  - component: {fileID: -8010570565343157260}
   m_Layer: 0
   m_Name: Knife
   m_TagString: Untagged
@@ -190,3 +191,115 @@ MonoBehaviour:
   trailGhostScale: 0.9
   trailGhostStartColor: {r: 1, g: 1, b: 1, a: 0.75}
   trailGhostEndColor: {r: 1, g: 1, b: 1, a: 0}
+  laserAbsorbExplosionFrames:
+  - {fileID: -4913982344839117222, guid: 07e29c108a6e21b48a934ecfa39780a8, type: 3}
+  - {fileID: -575696589628924425, guid: 1d7ace4bee5bfd64c961a8db1204adee, type: 3}
+  - {fileID: -1679085568475732275, guid: 4fd2b9c8106fb4346b1617dab9b693f6, type: 3}
+  - {fileID: -4960229840327395196, guid: 84d8531909490da45825ea5df8d0652c, type: 3}
+  - {fileID: -8398409672689469449, guid: db10ec50246d3b049835a30fecd5b908, type: 3}
+  - {fileID: -6658418643737043593, guid: 3d70be9dc2ae35d428cd969472ce7663, type: 3}
+  - {fileID: 6490354421893865411, guid: ed9b84db8c2d19242b2e0225c462ff7a, type: 3}
+  - {fileID: -3047093270054505527, guid: 5eda443e28f17df4cb6627aa984e52b0, type: 3}
+  - {fileID: 417835678940605132, guid: d509228ed1f323d43af6de4d40469bed, type: 3}
+  - {fileID: 6216626595070851197, guid: 09f0ed11bbbc6e049933f4e8803f0ec7, type: 3}
+  - {fileID: -609197253124883428, guid: fdd92ec1bc0f86b4f978ef6a41b0c7b9, type: 3}
+  laserAbsorbExplosionFrameRate: 24
+  laserAbsorbExplosionScale: {x: 1.2, y: 1.2, z: 1}
+  laserAbsorbExplosionSortingOrderOffset: 1
+--- !u!82 &-8010570565343157260
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6558331791977726706}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 8300000, guid: 2dc2ab2d08770491ab4013fb9c3d9fa7, type: 3}
+  m_PlayOnAwake: 1
+  m_Volume: 0.58
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4

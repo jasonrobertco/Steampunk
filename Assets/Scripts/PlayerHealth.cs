@@ -19,7 +19,6 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private float damageParticleSize = 0.14f;
     [SerializeField] private Color damageParticleStartColor = new Color(1f, 0.82f, 0.35f, 1f);
     [SerializeField] private Color damageParticleEndColor = new Color(1f, 0.35f, 0.2f, 0f);
-    [SerializeField] private float fallDeathY = -8f;
     [SerializeField] private Sprite[] deathExplosionFrames;
     [SerializeField] private float deathExplosionFrameRate = 15f;
     [SerializeField] private Vector3 deathExplosionOffset = new Vector3(0f, 0.1f, 0f);
@@ -50,9 +49,6 @@ public class PlayerHealth : MonoBehaviour
     {
         if (invincibilityTimer > 0)
             invincibilityTimer -= Time.deltaTime;
-
-        if (!isDead && transform.position.y < fallDeathY)
-            LoseLife();
     }
 
     public void TakeDamage(int amount)

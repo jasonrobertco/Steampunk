@@ -48,6 +48,7 @@ public class PlayerControllerScript : MonoBehaviour
         }
 
         isFacingRight = facesRightByDefault;
+        dashDirection = GetFacingDirection();
         isGrounded = CheckGrounded();
         wasGrounded = isGrounded;
         ApplyFacingDirection();
@@ -131,11 +132,10 @@ public class PlayerControllerScript : MonoBehaviour
         if (!hasDash)
             return;
 
-        if (moveInput.sqrMagnitude <= 0.01f)
-            return;
-
-        // Dash in the strongest held direction, then spend the stored dash.
-        dashDirection = GetCardinalDirection(moveInput);
+        // Dash in the strongest held direction, or fall back to facing when idle.
+        dashDirection = moveInput.sqrMagnitude > 0.01f
+            ? GetCardinalDirection(moveInput)
+            : GetFacingDirection();
         hasDash = false;
         dashTimer = dashDuration;
         dashResetPending = false;
@@ -173,6 +173,11 @@ public class PlayerControllerScript : MonoBehaviour
         }
 
         return input.y >= 0f ? Vector2.up : Vector2.down;
+    }
+
+    private Vector2 GetFacingDirection()
+    {
+        return isFacingRight ? Vector2.right : Vector2.left;
     }
 
     private void ApplyFacingDirection()
